@@ -1,0 +1,87 @@
+# Cloud Build configuration for ETL Pipeline
+steps:
+  # Paso 1: Construir imagen Docker con tags versionados
+  - name: 'gcr.io/cloud-builders/docker'
+    args: 
+      - 'build'
+      - '-t'
+      - 'gcr.io/data-engineer-gcp-469614/etl-pipeline:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/data-engineer-gcp-469614/etl-pipeline:latest'
+      - '-t'
+      - 'gcr.io/data-engineer-gcp-469614/etl-pipeline:build-$BUILD_ID'
+      - '.'
+    id: 'build-image'
+
+  # Paso 2: Push imagen con commit SHA
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/data-engineer-gcp-469614/etl-pipeline:$COMMIT_SHA']
+    id: 'push-commit-sha'
+
+  # Paso 3: Push imagen latest
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/data-engineer-gcp-469614/etl-pipeline:latest']
+    id: 'push-latest'
+
+  # Paso 4: Push imagen con build ID (para rollback)
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/data-engineer-gcp-469614/etl-pipeline:build-$BUILD_ID']
+    id: 'push-build-id'
+
+  # Paso 5: Deploy a Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'etl-pipeline'
+      - '--image'
+      - 'gcr.io/data-engineer-gcp-469614/etl-pipeline:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'  # Cambia según tus necesidades de seguridad
+      - '--port'
+      - '8080'
+      - '--memory'
+      - '2Gi'  # Más memoria para ETL
+      - '--cpu'
+      - '2'    # Más CPU para ETL
+      - '--concurrency'
+      - '10'   # Requests concurrentes por instancia
+      - '--max-instances'
+      - '5'    # Máximo 5 instancias
+      - '--timeout'
+      - '3600' # 1 hora timeout para ETL largos
+      - '--set-env-vars'
+      - 'GOOGLE_CLOUD_PROJECT=data-engineer-gcp-469614'
+    id: 'deploy-cloud-run'
+
+# Especificar qué imágenes se construyeron
+images:
+  - 'gcr.io/data-engineer-gcp-469614/etl-pipeline:$COMMIT_SHA'
+  - 'gcr.io/data-engineer-gcp-469614/etl-pipeline:latest'
+  - 'gcr.io/data-engineer-gcp-469614/etl-pipeline:build-$BUILD_ID'
+
+# Configuración del build
+options:
+  # Máquina más potente para builds más rápidos
+  machineType: 'E2_HIGHCPU_8'
+  # Tamaño de disco
+  diskSizeGb: 100
+  # Logging en Cloud Logging
+  logging: CLOUD_LOGGING_ONLY
+  # Variables de entorno para el build
+  env:
+    - 'DOCKER_BUILDKIT=1'
+
+# Timeout total del build (20 minutos)
+timeout: '1200s'
+
+# Variables personalizables 22
+substitutions:
+  _SERVICE_NAME: 'etl-pipeline'
+  _REGION: 'us-central1'
+  _MEMORY: '2Gi'
+  _CPU: '2'

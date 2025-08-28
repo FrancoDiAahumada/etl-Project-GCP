@@ -1,0 +1,16 @@
+# Entornos y dependencias
+venv/
+__pycache__/
+*.pyc
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Credenciales
+*.env
+*.json
+service-account-key*

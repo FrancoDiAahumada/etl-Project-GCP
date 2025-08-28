@@ -1,0 +1,17 @@
+# Web framework
+Flask==3.0.3
+gunicorn==21.2.0
+
+# Google Cloud
+google-cloud-storage==2.18.0
+google-cloud-bigquery==3.28.0
+google-cloud-logging==3.11.3
+
+
+# Data processing
+pandas==2.2.3
+numpy==2.1.1
+pyarrow==18.0.0
+python-dateutil==2.9.0
+faker==18.0.0
+
